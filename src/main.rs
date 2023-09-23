@@ -64,8 +64,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
     enable_raw_mode()?;
     execute!(stdout(), MoveTo(1,1))?; //1 cell margin
 
-    
-    let dirItems = fs::read_dir("./")?;
+    let ORIGINTESTPATH = "./../";
+
+    let dirItems = fs::read_dir(ORIGINTESTPATH)?;
     let dirItems = custom_sort(dirItems);
     println!("=LIST=");
     let (cursorX, cursorY) = cursor::position()?;
@@ -82,7 +83,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
             longest_item = String::from("Directory is empty");
         }
     }
-    let Ndisplayable = ((columns-2) as f32 / (longest_item.len()+2) as f32).floor();
+    let Ndisplayable: i32 = ((columns-2) as f32 / (longest_item.len()+2) as f32).floor() as i32;
     // let Ndisplayable = div.floor();
 
     
@@ -90,14 +91,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
     print!("termsize : {}x{}, longest item: {}, n displayable: {}", columns, rows, longest_item.len(), Ndisplayable);
     stdout().flush()?;
     
-    execute!(stdout(), MoveTo(cursorX+2,cursorY))?;
+    let mut displayablecounter = 0;
+    let mut currentline = 0;
+
+    execute!(stdout(), MoveTo(2,3))?;
     for path in dirItems.clone() {
         // println!("Name: {}", path);
         // print!("");
         stdout().flush()?;
-        if PathBuf::from(&path).is_dir() {
+        
+        if displayablecounter == Ndisplayable {
+            displayablecounter = 0;
+            currentline += 2;
+            execute!(stdout(), MoveTo(2,3+currentline))?;
+        }
+        displayablecounter += 1;
+        let pathbuf: PathBuf = [ORIGINTESTPATH, &path].iter().collect();
+        if pathbuf.is_dir() {
             print!("{}{}", path.clone().blue().bold(), " ".repeat(longest_item.len()-path.len()+2));
-        } else {
+        }
+        // else if pathbuf.is_file() {
+        //     print!("{}{}", path.clone().green().bold(), " ".repeat(longest_item.len()-path.len()+2));
+        // } 
+        else {
             print!("{}{}", path, " ".repeat(longest_item.len()-path.len()+2));
         }
     }
