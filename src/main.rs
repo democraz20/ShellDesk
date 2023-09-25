@@ -21,7 +21,7 @@ use std::{
 };
 
 
-use std::io::stdout;
+use std::io::{stdout, Seek};
 
 fn main() -> Result<(), Box<dyn std::error::Error>>{
     
@@ -68,7 +68,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
 
     let dirItems = fs::read_dir(ORIGINTESTPATH)?;
     let dirItems = custom_sort(dirItems);
-    println!("=LIST=");
+    // println!("=LIST=");
     let (cursorX, cursorY) = cursor::position()?;
     let (columns, rows) = terminal::size()?;
     
@@ -90,11 +90,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
     execute!(stdout(), MoveTo(1,0))?;
     print!("termsize : {}x{}, longest item: {}, n displayable: {}", columns, rows, longest_item.len(), Ndisplayable);
     stdout().flush()?;
-    
+
     let mut displayablecounter = 0;
     let mut currentline = 0;
 
-    execute!(stdout(), MoveTo(2,3))?;
+    execute!(stdout(), MoveTo(2,1))?;
     for path in dirItems.clone() {
         // println!("Name: {}", path);
         // print!("");
@@ -103,7 +103,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
         if displayablecounter == Ndisplayable {
             displayablecounter = 0;
             currentline += 2;
-            execute!(stdout(), MoveTo(2,3+currentline))?;
+            if currentline >= rows-2 {
+                break;
+            }
+            execute!(stdout(), MoveTo(2,1+currentline))?;
         }
         displayablecounter += 1;
         let pathbuf: PathBuf = [ORIGINTESTPATH, &path].iter().collect();
@@ -121,6 +124,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
     stdout().flush()?;
 
     let mut selected: usize = 0;
+    if dirItems.len() > 0 { //selecting first item
+        execute!(stdout(), MoveTo(1,1))?;
+        print!(">");
+        execute!(stdout(), MoveTo(dirItems[0].len() as u16 + 2, 1))?;
+        print!("<");
+        stdout().flush()?;
+    }
     loop {
         match event::read()? {
             Key(KeyEvent {
@@ -138,12 +148,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
                 code: KeyCode::Right,
                 kind: KeyEventKind::Press, ..
             }) => {
-                if !(selected > dirItems.len()-1) {
-                    selected += 1;
-                    execute!(stdout(), MoveTo(1, rows-2))?;
-                    print!("adding 1, is now {}", selected);
+                if dirItems.len() > 0 {
+                    if !(selected > dirItems.len()-1) {
+                        selected += 1;
+                        // execute!(stdout(), MoveTo(1, rows-2))?;
+                        // print!("adding 1, is now {}", selected);
+                        if selected <= Ndisplayable as usize && selected < dirItems.len(){
+                            // let previous_pos: u16 = (selected as u16-1)*Ndisplayable as u16;
+                            let previous_pos: u16 = (selected as u16-1)*(longest_item.len()+2) as u16 + 1;
+                            execute!(stdout(), MoveTo(previous_pos,1))?;
+                            print!(" ");
+                            execute!(stdout(), MoveTo(previous_pos + dirItems[selected-1].len() as u16 + 1,1))?;
+                            print!(" ");
+                            stdout().flush()?;
+
+                            let pos: u16 = (selected as u16*(longest_item.len() as u16+2)) + 1;
+                            
+                            execute!(stdout(), MoveTo(pos, 1))?;
+                            print!(">");
+                            execute!(stdout(), MoveTo(pos + dirItems[selected].len() as u16 + 1, 1))?;
+                            print!("<");   
+                            stdout().flush()?;
+                        }
+                    }
                 }
-                execute!(stdout(), MoveTo(1, rows-1))?;
+                // execute!(stdout(), MoveTo(1, rows-1))?;
                 stdout().flush()?;
             }
 
@@ -151,12 +180,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
                 code: KeyCode::Left,
                 kind: KeyEventKind::Press, ..
             }) => {
-                if selected > 1 {
-                    selected -= 1;
-                    execute!(stdout(), MoveTo(1, rows-2))?;
-                    print!("subtracting 1, is now {}", selected);
+                if dirItems.len() > 0 {   
+                    if selected > 1 {
+                        selected -= 1;
+                        // execute!(stdout(), MoveTo(1, rows-2))?;
+                        // print!("subtracting 1, is now {}", selected);
+                    }
                 }
-                execute!(stdout(), MoveTo(1, rows-1))?;
+                // execute!(stdout(), MoveTo(1, rows-1))?;
                 stdout().flush()?;
             }
 
