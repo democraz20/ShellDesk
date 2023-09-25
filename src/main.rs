@@ -64,7 +64,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
     enable_raw_mode()?;
     execute!(stdout(), MoveTo(1,1))?; //1 cell margin
 
-    let ORIGINTESTPATH = "./../";
+    let ORIGINTESTPATH = "./";
 
     let dirItems = fs::read_dir(ORIGINTESTPATH)?;
     let dirItems = custom_sort(dirItems);
@@ -149,13 +149,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
                 kind: KeyEventKind::Press, ..
             }) => {
                 if dirItems.len() > 0 {
-                    if !(selected > dirItems.len()-1) {
+                    if !(selected >= dirItems.len()-1) {
                         selected += 1;
                         // execute!(stdout(), MoveTo(1, rows-2))?;
                         // print!("adding 1, is now {}", selected);
                         if selected <= Ndisplayable as usize && selected < dirItems.len(){
                             // let previous_pos: u16 = (selected as u16-1)*Ndisplayable as u16;
                             let previous_pos: u16 = (selected as u16-1)*(longest_item.len()+2) as u16 + 1;
+
                             execute!(stdout(), MoveTo(previous_pos,1))?;
                             print!(" ");
                             execute!(stdout(), MoveTo(previous_pos + dirItems[selected-1].len() as u16 + 1,1))?;
@@ -181,10 +182,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
                 kind: KeyEventKind::Press, ..
             }) => {
                 if dirItems.len() > 0 {   
-                    if selected > 1 {
-                        selected -= 1;
+                    if selected >= 1 {
                         // execute!(stdout(), MoveTo(1, rows-2))?;
                         // print!("subtracting 1, is now {}", selected);
+                        selected -= 1;
+                        if selected+1 <= Ndisplayable as usize && selected+1 < dirItems.len(){
+                            let previous_pos: u16 = ((selected as u16)+1)*(longest_item.len()+2) as u16 + 1;
+                            
+                            execute!(stdout(), MoveTo(previous_pos, 1))?;
+                            print!(" ");
+                            execute!(stdout(), MoveTo(previous_pos + dirItems[selected+1].len() as u16 + 1, 1))?;
+                            print!(" ");
+                            
+                            let pos: u16 = ((selected as u16)*(longest_item.len() as u16+2)) + 1;
+                            
+                            execute!(stdout(), MoveTo(pos, 1))?;
+                            print!(">");
+                            execute!(stdout(), MoveTo(pos + dirItems[selected].len() as u16 + 1, 1))?;
+                            print!("<");   
+                            stdout().flush()?;
+                        }
+                        // selected -= 1;
                     }
                 }
                 // execute!(stdout(), MoveTo(1, rows-1))?;
