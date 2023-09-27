@@ -1,30 +1,27 @@
 #![allow(non_snake_case)]
-use std::fs::{ReadDir, DirEntry};
+use std::fs::{DirEntry, ReadDir};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
 use crossterm::{
-    event::{self, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, Event::Key},
-    execute, terminal::{EnterAlternateScreen, disable_raw_mode, LeaveAlternateScreen},
-    terminal,
-    terminal::{
-        enable_raw_mode
-    },
-    style::Stylize,
     cursor,
-    cursor::MoveTo
+    cursor::MoveTo,
+    event::{self, Event::Key, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
+    execute,
+    style::Stylize,
+    terminal,
+    terminal::enable_raw_mode,
+    terminal::{disable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use std::{
-    io::{self, Write}, 
-    fs
+    fs,
+    io::{self, Write},
 };
-
 
 use std::io::{stdout, Seek};
 
-fn main() -> Result<(), Box<dyn std::error::Error>>{
-    
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     // use std::ptr::null_mut;
     // use winapi::um::winuser::{
     //     GetForegroundWindow, ShowWindow, SW_MAXIMIZE, SWP_FRAMECHANGED, GWL_STYLE, SW_RESTORE,
@@ -59,10 +56,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
     //     println!("Window maximized to full-screen.");
     // }
 
-
     execute!(stdout(), EnterAlternateScreen)?;
     enable_raw_mode()?;
-    execute!(stdout(), MoveTo(1,1))?; //1 cell margin
+    execute!(stdout(), MoveTo(1, 1))?; //1 cell margin
 
     let ORIGINTESTPATH = "./";
 
@@ -71,61 +67,75 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
     // println!("=LIST=");
     let (cursorX, cursorY) = cursor::position()?;
     let (columns, rows) = terminal::size()?;
-    
-    print_borders(columns, rows)?;
-    
+
     let longest_item: String;
     match dirItems.iter().max_by_key(|s| s.len()) {
         Some(s) => {
             longest_item = String::from(s);
-        },
+        }
         None => {
             longest_item = String::from("Directory is empty");
         }
     }
-    let Ndisplayable: i32 = ((columns-2) as f32 / (longest_item.len()+2) as f32).floor() as i32;
+    let Ndisplayable: i32 = ((columns - 2) as f32 / (longest_item.len() + 2) as f32).floor() as i32;
     // let Ndisplayable = div.floor();
-
-    
-    execute!(stdout(), MoveTo(1,0))?;
-    print!("termsize : {}x{}, longest item: {}, n displayable: {}", columns, rows, longest_item.len(), Ndisplayable);
-    stdout().flush()?;
 
     let mut displayablecounter = 0;
     let mut currentline = 0;
 
-    execute!(stdout(), MoveTo(2,1))?;
+    let totallines = (dirItems.len() as f32 / Ndisplayable as f32).ceil() as i32;
+
+    execute!(stdout(), MoveTo(2, 1))?;
     for path in dirItems.clone() {
         // println!("Name: {}", path);
         // print!("");
         stdout().flush()?;
-        
+
         if displayablecounter == Ndisplayable {
             displayablecounter = 0;
             currentline += 2;
-            if currentline >= rows-2 {
+            if currentline >= rows - 2 {
                 break;
             }
-            execute!(stdout(), MoveTo(2,1+currentline))?;
+            execute!(stdout(), MoveTo(2, 1 + currentline))?;
         }
         displayablecounter += 1;
         let pathbuf: PathBuf = [ORIGINTESTPATH, &path].iter().collect();
         if pathbuf.is_dir() {
-            print!("{}{}", path.clone().blue().bold(), " ".repeat(longest_item.len()-path.len()+2));
+            print!(
+                "{}{}",
+                path.clone().blue().bold(),
+                " ".repeat(longest_item.len() - path.len() + 2)
+            );
         }
         // else if pathbuf.is_file() {
         //     print!("{}{}", path.clone().green().bold(), " ".repeat(longest_item.len()-path.len()+2));
-        // } 
+        // }
         else {
-            print!("{}{}", path, " ".repeat(longest_item.len()-path.len()+2));
+            print!(
+                "{}{}",
+                path,
+                " ".repeat(longest_item.len() - path.len() + 2)
+            );
         }
     }
 
+    print_borders(columns, rows)?;
+    execute!(stdout(), MoveTo(1, 0))?;
+    print!(
+        "termsize : {}x{}, longest item: {}, n displayable: {}, total lines: {}",
+        columns,
+        rows,
+        longest_item.len(),
+        Ndisplayable,
+        totallines
+    );
     stdout().flush()?;
 
     let mut selected: usize = 0;
-    if dirItems.len() > 0 { //selecting first item
-        execute!(stdout(), MoveTo(1,1))?;
+    if dirItems.len() > 0 {
+        //selecting first item
+        execute!(stdout(), MoveTo(1, 1))?;
         print!(">");
         execute!(stdout(), MoveTo(dirItems[0].len() as u16 + 2, 1))?;
         print!("<");
@@ -142,64 +152,123 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
                 // Exit the loop on Ctrl + Q.
                 // break;
                 break;
-            },
+            }
 
-            Key(KeyEvent{
+            Key(KeyEvent {
                 code: KeyCode::Right,
-                kind: KeyEventKind::Press, ..
+                kind: KeyEventKind::Press,
+                ..
             }) => {
                 if dirItems.len() > 0 {
-                    if !(selected >= dirItems.len()-1) {
+                    if !(selected >= dirItems.len() - 1) {
                         selected += 1;
+
+                        let currentline: u16 = (selected / Ndisplayable as usize + 1) as u16;
+
+                        execute!(stdout(), MoveTo(1, rows - 2))?;
+                        print!("currentline: {}", currentline);
+                        stdout().flush()?;
                         // execute!(stdout(), MoveTo(1, rows-2))?;
                         // print!("adding 1, is now {}", selected);
-                        if selected <= Ndisplayable as usize && selected < dirItems.len(){
+                        if selected <= Ndisplayable as usize && selected < dirItems.len() {
+                            //just for first line
                             // let previous_pos: u16 = (selected as u16-1)*Ndisplayable as u16;
-                            let previous_pos: u16 = (selected as u16-1)*(longest_item.len()+2) as u16 + 1;
+                            let previous_pos: u16 =
+                                (selected as u16 - 1) * (longest_item.len() + 2) as u16 + 1;
 
-                            execute!(stdout(), MoveTo(previous_pos,1))?;
+                            execute!(stdout(), MoveTo(previous_pos, 1))?;
                             print!(" ");
-                            execute!(stdout(), MoveTo(previous_pos + dirItems[selected-1].len() as u16 + 1,1))?;
+                            execute!(
+                                stdout(),
+                                MoveTo(previous_pos + dirItems[selected - 1].len() as u16 + 1, 1)
+                            )?;
                             print!(" ");
                             stdout().flush()?;
 
-                            let pos: u16 = (selected as u16*(longest_item.len() as u16+2)) + 1;
-                            
+                            let pos: u16 = (selected as u16 * (longest_item.len() as u16 + 2)) + 1;
+
                             execute!(stdout(), MoveTo(pos, 1))?;
                             print!(">");
-                            execute!(stdout(), MoveTo(pos + dirItems[selected].len() as u16 + 1, 1))?;
-                            print!("<");   
+                            execute!(
+                                stdout(),
+                                MoveTo(pos + dirItems[selected].len() as u16 + 1, 1)
+                            )?;
+                            print!("<");
                             stdout().flush()?;
                         }
+                        if selected > Ndisplayable as usize && selected < dirItems.len() {
+                            let previous_pos: u16 =
+                                (selected as u16 - 1) * (longest_item.len() + 2) as u16 + 1;
+
+                            execute!(stdout(), MoveTo(previous_pos, currentline + 1))?;
+                            print!(" ");
+                            execute!(
+                                stdout(),
+                                MoveTo(
+                                    previous_pos + dirItems[selected - 1].len() as u16 + 1,
+                                    currentline + 1
+                                )
+                            )?;
+                            print!(" ");
+                            stdout().flush()?;
+
+                            let pos: u16 = (selected as u16 * (longest_item.len() as u16 + 2)) + 1;
+
+                            execute!(stdout(), MoveTo(pos, currentline + 1))?;
+                            print!(">");
+                            execute!(
+                                stdout(),
+                                MoveTo(pos + dirItems[selected].len() as u16 + 1, currentline + 1)
+                            )?;
+                            print!("<");
+                            stdout().flush()?;
+
+                            execute!(stdout(), MoveTo(1, rows - 1))?;
+                            print!("test: {}", currentline);
+                        }
                     }
+                    //finding current line
+
+                    // if selected > Ndisplayable as usize && selected < dirItems.len() {
+
+                    // }
                 }
                 // execute!(stdout(), MoveTo(1, rows-1))?;
                 stdout().flush()?;
             }
 
-            Key(KeyEvent{
+            Key(KeyEvent {
                 code: KeyCode::Left,
-                kind: KeyEventKind::Press, ..
+                kind: KeyEventKind::Press,
+                ..
             }) => {
-                if dirItems.len() > 0 {   
+                if dirItems.len() > 0 {
                     if selected >= 1 {
                         // execute!(stdout(), MoveTo(1, rows-2))?;
                         // print!("subtracting 1, is now {}", selected);
                         selected -= 1;
-                        if selected+1 <= Ndisplayable as usize && selected+1 < dirItems.len(){
-                            let previous_pos: u16 = ((selected as u16)+1)*(longest_item.len()+2) as u16 + 1;
-                            
+                        if selected + 1 <= Ndisplayable as usize && selected + 1 < dirItems.len() {
+                            let previous_pos: u16 =
+                                ((selected as u16) + 1) * (longest_item.len() + 2) as u16 + 1;
+
                             execute!(stdout(), MoveTo(previous_pos, 1))?;
                             print!(" ");
-                            execute!(stdout(), MoveTo(previous_pos + dirItems[selected+1].len() as u16 + 1, 1))?;
+                            execute!(
+                                stdout(),
+                                MoveTo(previous_pos + dirItems[selected + 1].len() as u16 + 1, 1)
+                            )?;
                             print!(" ");
-                            
-                            let pos: u16 = ((selected as u16)*(longest_item.len() as u16+2)) + 1;
-                            
+
+                            let pos: u16 =
+                                ((selected as u16) * (longest_item.len() as u16 + 2)) + 1;
+
                             execute!(stdout(), MoveTo(pos, 1))?;
                             print!(">");
-                            execute!(stdout(), MoveTo(pos + dirItems[selected].len() as u16 + 1, 1))?;
-                            print!("<");   
+                            execute!(
+                                stdout(),
+                                MoveTo(pos + dirItems[selected].len() as u16 + 1, 1)
+                            )?;
+                            print!("<");
                             stdout().flush()?;
                         }
                         // selected -= 1;
@@ -209,23 +278,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
                 stdout().flush()?;
             }
 
-
-            Key(KeyEvent{
-                code:KeyCode::F(5),
-                kind: KeyEventKind::Press, ..
+            Key(KeyEvent {
+                code: KeyCode::F(5),
+                kind: KeyEventKind::Press,
+                ..
             }) => {
                 //refresh code
             }
             _ => {}
-            
         }
     }
 
     let handle = thread::spawn(move || {
         //handle file changes here
-
     });
-    
+
     execute!(stdout(), LeaveAlternateScreen)?;
     disable_raw_mode()?;
     // Join the spawned thread.
@@ -233,11 +300,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
     Ok(())
 }
 
-
 fn custom_sort(read_dir: ReadDir) -> Vec<String> {
-    let mut file_list: Vec<DirEntry> = read_dir
-        .filter_map(Result::ok)
-        .collect();
+    let mut file_list: Vec<DirEntry> = read_dir.filter_map(Result::ok).collect();
 
     file_list.sort_by(|a, b| {
         let a_name = a.file_name().to_string_lossy().to_string();
@@ -261,7 +325,7 @@ fn custom_sort(read_dir: ReadDir) -> Vec<String> {
     return file_list
         .iter()
         .map(|entry| entry.file_name().to_string_lossy().to_string())
-        .collect()
+        .collect();
 }
 
 fn print_borders(X: u16, Y: u16) -> Result<(), Box<dyn std::error::Error>> {
@@ -275,33 +339,33 @@ fn print_borders(X: u16, Y: u16) -> Result<(), Box<dyn std::error::Error>> {
 
     //corners
 
-    execute!(stdout(), MoveTo(0,0))?;
+    execute!(stdout(), MoveTo(0, 0))?;
     print!("{}", top_left); //╔
-    
+
     execute!(stdout(), MoveTo(X, 0))?;
-    print!("{}", top_right); 
+    print!("{}", top_right);
 
     execute!(stdout(), MoveTo(0, Y))?;
-    print!("{}", bottom_left); 
+    print!("{}", bottom_left);
 
     execute!(stdout(), MoveTo(X, Y))?;
-    print!("{}", bottom_right); 
+    print!("{}", bottom_right);
 
     //sides
 
-    execute!(stdout(), MoveTo(1,0))?;
-    print!("{}", String::from(horizontal).repeat((X-2).into()));
+    execute!(stdout(), MoveTo(1, 0))?;
+    print!("{}", String::from(horizontal).repeat((X - 2).into()));
 
-    execute!(stdout(), MoveTo(1,Y))?;
-    print!("{}", String::from(horizontal).repeat((X-2).into()));
+    execute!(stdout(), MoveTo(1, Y))?;
+    print!("{}", String::from(horizontal).repeat((X - 2).into()));
 
-    for i in 0..Y-2 {
-        execute!(stdout(), MoveTo(0,i+1))?;
+    for i in 0..Y - 2 {
+        execute!(stdout(), MoveTo(0, i + 1))?;
         print!("{}", vertical);
     }
 
-    for i in 0..Y-2 {
-        execute!(stdout(), MoveTo(X,i+1))?;
+    for i in 0..Y - 2 {
+        execute!(stdout(), MoveTo(X, i + 1))?;
         print!("{}", vertical);
     }
 
