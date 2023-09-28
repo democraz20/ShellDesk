@@ -162,7 +162,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if dirItems.len() > 0 {
                     if !(selected >= dirItems.len() - 1) {
                         selected += 1;
-
+                        
+                        let top_margin = 1;
                         let currentline: u16 = (selected / Ndisplayable as usize + 1) as u16;
 
                         execute!(stdout(), MoveTo(1, rows - 2))?;
@@ -170,61 +171,64 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         stdout().flush()?;
                         // execute!(stdout(), MoveTo(1, rows-2))?;
                         // print!("adding 1, is now {}", selected);
-                        if selected <= Ndisplayable as usize && selected < dirItems.len() {
+                        if selected+1 <= Ndisplayable as usize && selected < dirItems.len() {
                             //just for first line
                             // let previous_pos: u16 = (selected as u16-1)*Ndisplayable as u16;
                             let previous_pos: u16 =
                                 (selected as u16 - 1) * (longest_item.len() + 2) as u16 + 1;
 
-                            execute!(stdout(), MoveTo(previous_pos, 1))?;
+                            execute!(stdout(), MoveTo(previous_pos, top_margin))?;
                             print!(" ");
                             execute!(
                                 stdout(),
-                                MoveTo(previous_pos + dirItems[selected - 1].len() as u16 + 1, 1)
+                                MoveTo(previous_pos + dirItems[selected - 1].len() as u16 + 1, top_margin)
                             )?;
                             print!(" ");
                             stdout().flush()?;
 
                             let pos: u16 = (selected as u16 * (longest_item.len() as u16 + 2)) + 1;
 
-                            execute!(stdout(), MoveTo(pos, 1))?;
+                            execute!(stdout(), MoveTo(pos, top_margin))?;
                             print!(">");
                             execute!(
                                 stdout(),
-                                MoveTo(pos + dirItems[selected].len() as u16 + 1, 1)
+                                MoveTo(pos + dirItems[selected].len() as u16 + 1, top_margin)
                             )?;
                             print!("<");
                             stdout().flush()?;
                         }
-                        if selected > Ndisplayable as usize && selected < dirItems.len() {
-                            let previous_pos: u16 =
-                                (selected as u16 - 1) * (longest_item.len() + 2) as u16 + 1;
+                        //2 line down
+                        if selected+1 > Ndisplayable as usize && selected < dirItems.len() {
+                            let prev_item_line = ((selected-1)/Ndisplayable as usize) as u16;
+                            // let previous_pos: u16 =
+                            //     (selected as u16 - 1) * (longest_item.len() + 2) as u16 + 1;
 
-                            execute!(stdout(), MoveTo(previous_pos, currentline + 1))?;
-                            print!(" ");
-                            execute!(
-                                stdout(),
-                                MoveTo(
-                                    previous_pos + dirItems[selected - 1].len() as u16 + 1,
-                                    currentline + 1
-                                )
-                            )?;
-                            print!(" ");
-                            stdout().flush()?;
+                            // execute!(stdout(), MoveTo(previous_pos, currentline + top_margin))?;
+                            // print!(" ");
+                            // execute!(
+                            //     stdout(),
+                            //     MoveTo(
+                            //         previous_pos + dirItems[selected - 1].len() as u16 + 1,
+                            //         currentline + top_margin
+                            //     )
+                            // )?;
+                            // print!(" ");
+                            // stdout().flush()?;
 
-                            let pos: u16 = (selected as u16 * (longest_item.len() as u16 + 2)) + 1;
+                            // let pos: u16 = (selected as u16 * (longest_item.len() as u16 + 2)) + 1;
 
-                            execute!(stdout(), MoveTo(pos, currentline + 1))?;
-                            print!(">");
-                            execute!(
-                                stdout(),
-                                MoveTo(pos + dirItems[selected].len() as u16 + 1, currentline + 1)
-                            )?;
-                            print!("<");
-                            stdout().flush()?;
+                            // execute!(stdout(), MoveTo(pos, currentline + top_margin))?;
+                            // print!(">");
+                            // execute!(
+                            //     stdout(),
+                            //     MoveTo(pos + dirItems[selected].len() as u16 + 1, currentline + top_margin)
+                            // )?;
+                            // print!("<");
+                            // stdout().flush()?;
 
-                            execute!(stdout(), MoveTo(1, rows - 1))?;
-                            print!("test: {}", currentline);
+                            // execute!(stdout(), MoveTo(1, rows - 1))?;
+                            // print!("test: {}", currentline);
+                            // stdout().flush()?;
                         }
                     }
                     //finding current line
