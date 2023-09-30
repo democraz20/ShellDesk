@@ -375,3 +375,7 @@ fn print_borders(X: u16, Y: u16) -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+fn find_pos_of_selected() {
+    
+}
