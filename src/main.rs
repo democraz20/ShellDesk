@@ -376,6 +376,6 @@ fn print_borders(X: u16, Y: u16) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn find_pos_of_selected() {
-    
+fn find_pos_of_selected(items: &Vec<String>, selected: usize, nDisplayable: usize, topPadding: usize, sidePadding: usize) -> ((u16, u16), (u16, u16)) {
+    return ((0,0),(0,0))
 }
