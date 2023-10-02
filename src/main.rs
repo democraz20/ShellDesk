@@ -171,64 +171,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         stdout().flush()?;
                         // execute!(stdout(), MoveTo(1, rows-2))?;
                         // print!("adding 1, is now {}", selected);
-                        if selected+1 <= Ndisplayable as usize && selected < dirItems.len() {
-                            //just for first line
-                            // let previous_pos: u16 = (selected as u16-1)*Ndisplayable as u16;
-                            let previous_pos: u16 =
-                                (selected as u16 - 1) * (longest_item.len() + 2) as u16 + 1;
-
-                            execute!(stdout(), MoveTo(previous_pos, top_margin))?;
-                            print!(" ");
-                            execute!(
-                                stdout(),
-                                MoveTo(previous_pos + dirItems[selected - 1].len() as u16 + 1, top_margin)
-                            )?;
-                            print!(" ");
-                            stdout().flush()?;
-
-                            let pos: u16 = (selected as u16 * (longest_item.len() as u16 + 2)) + 1;
-
-                            execute!(stdout(), MoveTo(pos, top_margin))?;
-                            print!(">");
-                            execute!(
-                                stdout(),
-                                MoveTo(pos + dirItems[selected].len() as u16 + 1, top_margin)
-                            )?;
-                            print!("<");
-                            stdout().flush()?;
-                        }
-                        //2 line down
-                        if selected+1 > Ndisplayable as usize && selected < dirItems.len() {
-                            let prev_item_line = ((selected-1)/Ndisplayable as usize) as u16;
-                            // let previous_pos: u16 =
-                            //     (selected as u16 - 1) * (longest_item.len() + 2) as u16 + 1;
-
-                            // execute!(stdout(), MoveTo(previous_pos, currentline + top_margin))?;
-                            // print!(" ");
-                            // execute!(
-                            //     stdout(),
-                            //     MoveTo(
-                            //         previous_pos + dirItems[selected - 1].len() as u16 + 1,
-                            //         currentline + top_margin
-                            //     )
-                            // )?;
-                            // print!(" ");
-                            // stdout().flush()?;
-
-                            // let pos: u16 = (selected as u16 * (longest_item.len() as u16 + 2)) + 1;
-
-                            // execute!(stdout(), MoveTo(pos, currentline + top_margin))?;
-                            // print!(">");
-                            // execute!(
-                            //     stdout(),
-                            //     MoveTo(pos + dirItems[selected].len() as u16 + 1, currentline + top_margin)
-                            // )?;
-                            // print!("<");
-                            // stdout().flush()?;
-
-                            // execute!(stdout(), MoveTo(1, rows - 1))?;
-                            // print!("test: {}", currentline);
-                            // stdout().flush()?;
+                        // if selected+1 <= Ndisplayable as usize && selected < dirItems.len() {
+                        //     let pos = find_pos_of_selected(&dirItems, selected, Ndisplayable, 3, 2);
+                        // }
+                        // //2 line down
+                        // if selected+1 > Ndisplayable as usize && selected < dirItems.len() {
+                        //     let pos = find_pos_of_selected(&dirItems, selected, Ndisplayable, 3, 2);
+                            
+                        // }
+                        if selected < dirItems.len() {
+                            let pos = find_pos_of_selected(&dirItems, selected, Ndisplayable, 3, 2);
+                            let pre_pos = find_pos_of_selected(&dirItems, selected-1, Ndisplayable, 3, 2);
                         }
                     }
                     //finding current line
@@ -376,6 +329,6 @@ fn print_borders(X: u16, Y: u16) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn find_pos_of_selected(items: &Vec<String>, selected: usize, nDisplayable: usize, topPadding: usize, sidePadding: usize) -> ((u16, u16), (u16, u16)) {
+fn find_pos_of_selected(items: &Vec<String>, selected: usize, nDisplayable: i32, topPadding: usize, sidePadding: usize) -> ((u16, u16), (u16, u16)) {
     return ((0,0),(0,0))
 }
