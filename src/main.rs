@@ -24,8 +24,10 @@ const LEFT_MARGIN: u16 = 1;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ORIGINTESTPATH = "./../";
     //desktop
-    let dirItems = fs::read_dir(ORIGINTESTPATH)?;
-    let dirItems = custom_sort(dirItems);
+    let UdirItems = fs::read_dir(ORIGINTESTPATH)?;
+    let mut UdirItems = custom_sort(UdirItems);
+    UdirItems.insert(0, String::from(".."));
+
     let longest_item: String;
 
     execute!(stdout(), EnterAlternateScreen)?;
@@ -35,12 +37,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (cursorX, cursorY) = cursor::position()?;
     let (columns, rows) = terminal::size()?;
     
-    print_borders(columns, rows)?;
-    execute!(stdout(), MoveTo(0,1))?;
+    // print_borders(columns, rows)?;
+    // execute!(stdout(), MoveTo(0,1))?;
 
-    println!("col : rows | {} : {}", columns, rows);
+    // println!("col : rows | {} : {}", columns, rows);
 
-    match dirItems.iter().max_by_key(|s| s.len()) {
+    match UdirItems.iter().max_by_key(|s| s.len()) {
         Some(s) => {
             longest_item = String::from(s);
         }
@@ -52,16 +54,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let items_per_row: i32 = ((columns - (RIGHT_MARGIN+LEFT_MARGIN)) as f32 / (longest_item.len() + 2) as f32).floor() as i32;
     let rows_on_screen: i32 = ((rows as i32 - (TOP_MARGIN+BOTTOM_MARGIN) as i32) + 1) / 2;  
 
+    let mut dirItems: Vec<Vec<String>> = vec![];
+
+    for chunk in UdirItems.chunks(items_per_row as usize) {
+        let sub_vec: Vec<String> = chunk.to_vec();
+        dirItems.push(sub_vec);
+    }
+
+    drop(UdirItems);
+
+    println!();
+    for row in &dirItems {
+        println!("{:?}", row);
+    }
+
     // println!(" x {}, y {}", items_per_row, rows_on_screen);
     
-    for x in 0..items_per_row {
-        for y in 0..rows_on_screen {
-            let (posx, posy) = get_display_grid_pos((x as u16, y as u16), longest_item.len() as u16)?;
-            execute!(stdout(), MoveTo(posx, posy))?;
-            print!(">{}<", "-".repeat(longest_item.len()));
-            stdout().flush()?;
-        }
-    }
+    //IMPORTANT
+    // for x in 0..items_per_row {
+    //     for y in 0..rows_on_screen {
+    //         let (posx, posy) = get_display_grid_pos((x as u16, y as u16), longest_item.len() as u16)?;
+    //         execute!(stdout(), MoveTo(posx, posy))?;
+    //         print!(">{}<", "-".repeat(longest_item.len()));
+    //         stdout().flush()?;
+    //     }
+    // }
+
+    // let mut selected_index = 0;
+    let (mut selected_index,mut selected_x,mut selected_y) = (0,0,0);
 
     loop {
         match event::read()? {
@@ -75,6 +95,82 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // break;
                 break;
             }, 
+
+            Key(KeyEvent{
+                code: KeyCode::Right,
+                kind: KeyEventKind::Press, ..
+            }) => {
+                if selected_index < dirItems.len() {
+                    selected_index += 1;
+                    (selected_x, selected_y) = index_to_xy(selected_index, items_per_row as usize);
+                    execute!(stdout(), MoveTo(0,0))?;
+                    println!(
+                        "index: {}, selected: {}{}", 
+                        selected_index, 
+                        dirItems[selected_y][selected_x], 
+                        "-".repeat(longest_item.len() - dirItems[selected_y][selected_x].len())
+                    );
+                }
+            },
+            Key(KeyEvent{
+                code: KeyCode::Left,
+                kind: KeyEventKind::Press, ..
+            }) => {
+                if selected_index > 0 {
+                    selected_index -= 1;
+                    (selected_x, selected_y) = index_to_xy(selected_index, items_per_row as usize);
+                    execute!(stdout(), MoveTo(0,0))?;
+                    println!(
+                        "index: {}, selected: {}{}", 
+                        selected_index, 
+                        dirItems[selected_y][selected_x], 
+                        "-".repeat(longest_item.len() - dirItems[selected_y][selected_x].len())
+                    );
+                }
+            },
+            Key(KeyEvent{
+                code: KeyCode::Down,
+                kind: KeyEventKind::Press, ..
+            }) => {
+                if selected_index < dirItems.len() {
+                    if (selected_index+items_per_row as usize) > (dirItems.len()-1) {
+                        selected_index = dirItems.len()-1
+                    }
+                    else {
+                        selected_index += items_per_row as usize;
+                    }
+                    (selected_x, selected_y) = index_to_xy(selected_index, items_per_row as usize);
+                    execute!(stdout(), MoveTo(0,0))?;
+                    println!(
+                        "index: {}, selected: {}{}", 
+                        selected_index, 
+                        dirItems[selected_y][selected_x], 
+                        "-".repeat(longest_item.len() - dirItems[selected_y][selected_x].len())
+                    );
+                }
+            },
+            Key(KeyEvent{
+                code: KeyCode::Up,
+                kind: KeyEventKind::Press, ..
+            }) => {
+                if selected_index > 0 {
+                    // #[allow(unused_comparisons)]
+                    if (selected_index as i32-items_per_row) < 0 {
+                        selected_index = 0;
+                    }
+                    else {
+                        selected_index -= items_per_row as usize;
+                    }
+                    (selected_x, selected_y) = index_to_xy(selected_index, items_per_row as usize);
+                    execute!(stdout(), MoveTo(0,0))?;
+                    println!(
+                        "index: {}, selected: {}{}", 
+                        selected_index, 
+                        dirItems[selected_y][selected_x], 
+                        "-".repeat(longest_item.len() - dirItems[selected_y][selected_x].len())
+                    );
+                }
+            },
             _ => {}
         }
     }
@@ -89,6 +185,12 @@ fn get_display_grid_pos((gridX, gridY): (u16, u16), longest_item_len: u16) -> Re
     let x_pos = RIGHT_MARGIN+((longest_item_len+2)*gridX);
     let y_pos = TOP_MARGIN+(gridY*2);
     return Ok((x_pos, y_pos))
+}
+
+fn index_to_xy(cursor: usize, width: usize) -> (usize, usize) {
+    let x = cursor % width;      // Calculate the column (x-coordinate)
+    let y = cursor / width;      // Calculate the row (y-coordinate)
+    (x, y)
 }
 
 fn custom_sort(read_dir: ReadDir) -> Vec<String> {
