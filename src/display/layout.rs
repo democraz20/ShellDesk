@@ -12,3 +12,8 @@ pub fn index_to_xy(cursor: usize, width: usize) -> (usize, usize) {
     let y = cursor / width;      // Calculate the row (y-coordinate)
     (x, y)
 }
+
+pub fn xy_to_index(x: usize, y: usize, width: usize) -> usize {
+    let index = y * width + x;
+    index
+}

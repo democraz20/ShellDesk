@@ -28,3 +28,13 @@ pub fn custom_sort(read_dir: ReadDir) -> Vec<String> {
         .map(|entry| entry.file_name().to_string_lossy().to_string())
         .collect();
 }
+
+pub fn is_within_range(from: i32, to: i32, num: i32) -> Option<bool> {
+    if from == to || from > to {
+        // Return None if from and to are the same or if from is greater than to
+        None
+    } else {
+        // Check if num is within the range (excluding from and to)
+        Some(num > from && num < to)
+    }
+}

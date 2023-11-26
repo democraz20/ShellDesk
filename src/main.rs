@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 
-use std::fs;
-use std::io::stdout;
+use std::{fs, error::Error};
+use std::io::{stdout, Write};
 use crossterm::{
     cursor,
     cursor::MoveTo,
@@ -13,29 +13,50 @@ use crossterm::{
     terminal::{disable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 
-use crate::display::layout::index_to_xy;
+use crate::display::layout::{
+    index_to_xy,
+    xy_to_index
+};
+use crate::file_management::preprocessing::is_within_range;
 
 mod display;
 mod file_management;
+mod misc;
+use std::fs::OpenOptions;
+
 
 const TOP_MARGIN: u16 = 2;
 const BOTTOM_MARGIN: u16 = 1;
 const RIGHT_MARGIN: u16 = 1;
 const LEFT_MARGIN: u16 = 1;
 
+#[derive(Debug)]
 struct Cursor {
-    selected: Selected,
-    current_line: usize
+    selecting: Selecting,   
+    current_line: usize,
+    selected: Selected
 }
 
-struct Selected {
+#[derive(Debug)]
+struct Selecting {
     index: usize,
     x: usize,
     y: usize
 }
 
+#[derive(Debug)]
+struct Selected {
+    items: Vec<String>,
+    from: Option<usize>,
+    to: Option<usize>
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ORIGINTESTPATH = "./../";
+
+    init_logger!();
+
+
     //desktop
     let UdirItems = fs::read_dir(ORIGINTESTPATH)?;
     // let mut UdirItems = filecustom_sort(UdirItems);
@@ -77,9 +98,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         dirItems.push(sub_vec);
     }
 
+    
     drop(UdirItems);
-
-    println!();
+    
+    execute!(stdout(), MoveTo(0,0))?;
+    // println!();
     for row in &dirItems {
         println!("{:?}", row);
     }
@@ -99,8 +122,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // let mut selected_index = 0;
     // let (mut selected_index,mut selected_x,mut selected_y) = (0,0,0);
     let mut cursor = Cursor{
-        selected: Selected { index: 0, x: 0, y: 0 },
-        current_line: 0
+        selecting: Selecting { index: 0, x: 0, y: 0 },
+        current_line: 0,
+        selected: Selected { items: vec![], from: None, to: None }
     };
 
     loop {
@@ -116,87 +140,200 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 break;
             }, 
 
+            //-----------multiselect-----------------
+            Key(KeyEvent{
+                code: KeyCode::Right,
+                kind: KeyEventKind::Press,
+                modifiers: KeyModifiers::SHIFT, ..
+            }) => {
+                if cursor.selecting.index < dirItemsCount {
+                    let (x, y) = index_to_xy(cursor.selecting.index, items_per_row as usize);
+                    let t = &dirItems[y][x];
+                    if t == &String::from("..") {
+                        cursor.selecting.index += 1;
+                        (cursor.selecting.x, cursor.selecting.y) = index_to_xy(cursor.selecting.index, items_per_row as usize);
+                        t_p(&cursor, &dirItems, &longest_item)?;
+                        v_p(&cursor.selected)?;
+                        continue;
+                    }
+
+                    //start selecting
+                    if cursor.selected.items.len() == 0 {
+                        cursor.selected.from = Some(cursor.selecting.index);
+                        cursor.selected.to = Some(cursor.selecting.index+1);
+                        
+                        // cursor.selected.items = vec
+                        // cursor.selected.items.push(value)
+                        let (x, y) = index_to_xy(cursor.selecting.index, items_per_row as usize);
+                        let t = &dirItems[y][x];
+                        cursor.selected.items.push(t.to_string());
+                        let (x, y) = index_to_xy(cursor.selecting.index+1, items_per_row as usize);
+                        let t = &dirItems[y][x];
+                        cursor.selected.items.push(t.to_string());
+                        
+                        cursor.selecting.index += 1;
+
+
+                        t_p(&cursor, &dirItems, &longest_item)?;
+                        v_p(&cursor.selected)?;
+                        continue;
+                    }
+
+                    //after
+                    //if something is selected
+                    if cursor.selected.from != None && cursor.selected.to != None {
+                        //`.unwrap()` is safe under here because already checked for `None`
+
+                        let v = is_within_range(
+                            cursor.selected.from.unwrap() as i32,
+                            cursor.selected.to.unwrap() as i32,
+                            cursor.selecting.index as i32 
+                        );
+                        if v != None && v == Some(true) {
+                            //reset the cursor
+                            cursor.selected.items.clear();
+                            cursor.selected.from = None;
+                            cursor.selected.to = None;
+
+                            cursor.selected.from = Some(cursor.selecting.index);
+
+                            let (x, y) = index_to_xy(cursor.selecting.index, items_per_row as usize);
+                            let t = &dirItems[y][x];
+                            cursor.selected.items.push(t.to_string());
+                            
+                            cursor.selecting.index += 1;
+                            (cursor.selecting.x, cursor.selecting.y) = index_to_xy(cursor.selecting.index, items_per_row as usize);
+                            
+                            cursor.selected.to = Some(cursor.selecting.index);
+
+                            let (x, y) = index_to_xy(cursor.selecting.index, items_per_row as usize);
+                            let t = &dirItems[y][x];
+                            cursor.selected.items.push(t.to_string());
+
+                            // log!("pushed: {}, buf: {:?}", t, cursor.selected.items);
+
+                        }
+                        else if Some(cursor.selecting.index) == cursor.selected.from {
+                            if cursor.selected.from.unwrap()+1 == cursor.selected.to.unwrap() {
+                                //reset selected to zero
+                                // cursor.selected.from = 
+                            } else {
+                                cursor.selecting.index+=1;
+                                let v = cursor.selected.from.unwrap() + 1;
+                                cursor.selected.from = Some(v);
+                                cursor.selected.items.remove(0);
+                            }
+                        }
+                        else if Some(cursor.selecting.index) == cursor.selected.to {
+                            cursor.selecting.index+=1;
+                            let v = cursor.selected.to.unwrap() + 1;
+                            cursor.selected.to = Some(v);
+                            let (x, y) = index_to_xy(cursor.selecting.index, items_per_row as usize);
+                            let t = &dirItems[y][x];
+                            cursor.selected.items.push(t.to_string());
+                        }
+                        t_p(&cursor, &dirItems, &longest_item)?;
+                        v_p(&cursor.selected)?;
+                    }
+                }
+            },
+
+            Key(KeyEvent{
+                code: KeyCode::Left,
+                kind: KeyEventKind::Press,
+                modifiers: KeyModifiers::SHIFT, ..
+            }) => {
+                if cursor.selecting.index-1 >= 1 {
+                    //cant be ".." because ".." is index 0
+                    if cursor.selected.items.len() == 0 {
+                        cursor.selected.from = Some(cursor.selecting.index-1);
+                        cursor.selected.to = Some(cursor.selecting.index);
+
+                        let (x, y) = index_to_xy(cursor.selecting.index-1, items_per_row as usize);
+                        let t = &dirItems[y][x];
+                        cursor.selected.items.push(t.to_string());
+                        let (x, y) = index_to_xy(cursor.selecting.index, items_per_row as usize);
+                        let t = &dirItems[y][x];
+                        cursor.selected.items.push(t.to_string());
+
+                        cursor.selecting.index -= 1;
+
+                        t_p(&cursor, &dirItems, &longest_item)?;
+                        v_p(&cursor.selected)?;
+                        continue;
+                    }
+
+                    if cursor.selected.from != None && cursor.selected.to != None {
+                        let v = is_within_range(
+                            cursor.selected.from.unwrap() as i32,
+                            cursor.selected.to.unwrap() as i32,
+                            cursor.selecting.index as i32 
+                        );
+                        if v != None && v == Some(true) {
+                            cursor.selected.items.clear();
+                            cursor.selected.from = None;
+                            cursor.selected.to = None;
+                        }
+                        else if Some(cursor.selecting.index) == cursor.selected.from {
+                            
+                        }
+                    }
+                }
+            }
+
+            //------------normal select----------------
             Key(KeyEvent{
                 code: KeyCode::Right,
                 kind: KeyEventKind::Press, ..
             }) => {
-                if cursor.selected.index < dirItemsCount {
-                    cursor.selected.index += 1;
-                    (cursor.selected.x, cursor.selected.y) = index_to_xy(cursor.selected.index, items_per_row as usize);
-                    execute!(stdout(), MoveTo(0,0))?;
-                    println!(
-                        "index: {} at ({},{}), selected: {}{}", 
-                        cursor.selected.index, 
-                        cursor.selected.x,
-                        cursor.selected.y,
-                        dirItems[cursor.selected.y][cursor.selected.x], 
-                        "-".repeat(longest_item.len() - dirItems[cursor.selected.y][cursor.selected.x].len())
-                    );
+                if cursor.selecting.index < dirItemsCount {
+                    cursor.selecting.index += 1;
+                    (cursor.selecting.x, cursor.selecting.y) = index_to_xy(cursor.selecting.index, items_per_row as usize);
+                    t_p(&cursor, &dirItems, &longest_item)?;
                 }
             },
             Key(KeyEvent{
                 code: KeyCode::Left,
                 kind: KeyEventKind::Press, ..
             }) => {
-                if cursor.selected.index > 0 {
-                    cursor.selected.index -= 1;
-                    (cursor.selected.x, cursor.selected.y) = index_to_xy(cursor.selected.index, items_per_row as usize);
-                    execute!(stdout(), MoveTo(0,0))?;
-                    println!(
-                        "index: {} at ({},{}), selected: {}{}", 
-                        cursor.selected.index, 
-                        cursor.selected.x,
-                        cursor.selected.y,
-                        dirItems[cursor.selected.y][cursor.selected.x], 
-                        "-".repeat(longest_item.len() - dirItems[cursor.selected.y][cursor.selected.x].len())
-                    );
+                if cursor.selecting.index > 0 {
+                    cursor.selecting.index -= 1;
+                    (cursor.selecting.x, cursor.selecting.y) = index_to_xy(cursor.selecting.index, items_per_row as usize);
+                    t_p(&cursor, &dirItems, &longest_item)?;
+
                 }
             },
             Key(KeyEvent{
                 code: KeyCode::Down,
                 kind: KeyEventKind::Press, ..
             }) => {
-                if cursor.selected.index < dirItemsCount {
-                    if (cursor.selected.index+items_per_row as usize) > (dirItemsCount-1) {
-                        cursor.selected.index = dirItemsCount-1
+                if cursor.selecting.index < dirItemsCount {
+                    if (cursor.selecting.index+items_per_row as usize) > (dirItemsCount-1) {
+                        cursor.selecting.index = dirItemsCount-1
                     }
                     else {
-                        cursor.selected.index += items_per_row as usize;
+                        cursor.selecting.index += items_per_row as usize;
                     }
-                    (cursor.selected.x, cursor.selected.y) = index_to_xy(cursor.selected.index, items_per_row as usize);
-                    execute!(stdout(), MoveTo(0,0))?;
-                    println!(
-                        "index: {} at ({},{}), selected: {}{}", 
-                        cursor.selected.index, 
-                        cursor.selected.x,
-                        cursor.selected.y,
-                        dirItems[cursor.selected.y][cursor.selected.x], 
-                        "-".repeat(longest_item.len() - dirItems[cursor.selected.y][cursor.selected.x].len())
-                    );
+                    (cursor.selecting.x, cursor.selecting.y) = index_to_xy(cursor.selecting.index, items_per_row as usize);
+                    t_p(&cursor, &dirItems, &longest_item)?;
+
                 }
             },
             Key(KeyEvent{
                 code: KeyCode::Up,
                 kind: KeyEventKind::Press, ..
             }) => {
-                if cursor.selected.index > 0 {
+                if cursor.selecting.index > 0 {
                     // #[allow(unused_comparisons)]
-                    if (cursor.selected.index as i32-items_per_row) < 0 {
-                        cursor.selected.index = 0;
+                    if (cursor.selecting.index as i32-items_per_row) < 0 {
+                        cursor.selecting.index = 0;
                     }
                     else {
-                        cursor.selected.index -= items_per_row as usize;
+                        cursor.selecting.index -= items_per_row as usize;
                     }
-                    (cursor.selected.x, cursor.selected.y) = index_to_xy(cursor.selected.index, items_per_row as usize);
-                    execute!(stdout(), MoveTo(0,0))?;
-                    println!(
-                        "index: {} at ({},{}), selected: {}{}", 
-                        cursor.selected.index, 
-                        cursor.selected.x,
-                        cursor.selected.y,
-                        dirItems[cursor.selected.y][cursor.selected.x], 
-                        "-".repeat(longest_item.len() - dirItems[cursor.selected.y][cursor.selected.x].len())
-                    );
+                    (cursor.selecting.x, cursor.selecting.y) = index_to_xy(cursor.selecting.index, items_per_row as usize);
+                    t_p(&cursor, &dirItems, &longest_item)?;
+
                 }
             },
             _ => {}
@@ -206,5 +343,63 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     execute!(stdout(), LeaveAlternateScreen)?;
     disable_raw_mode()?;
 
+    Ok(())
+}
+
+fn t_p(cursor: &Cursor, dirItems: &Vec<Vec<String>> , longest_item: &String) -> Result<(), Box<dyn Error>>{
+    // execute!(stdout(), MoveTo(0,0))?;
+    // println!(
+    //     "index: {} at ({},{}), selecting: {}{}", 
+    //     cursor.selecting.index, 
+    //     cursor.selecting.x,
+    //     cursor.selecting.y,
+    //     dirItems[cursor.selecting.y][cursor.selecting.x], 
+    //     "-".repeat(longest_item.len() - dirItems[cursor.selecting.y][cursor.selecting.x].len())
+    // );
+    // stdout().flush()?;
+    log!(
+        "index: {} at ({},{}), selecting: {}", 
+        cursor.selecting.index, 
+        cursor.selecting.x,
+        cursor.selecting.y,
+        dirItems[cursor.selecting.y][cursor.selecting.x], 
+    );
+    Ok(())
+}
+fn v_p(selected: &Selected) -> Result<(), Box<dyn Error>> {
+    execute!(stdout(), MoveTo(0, 1))?;
+    // //lol what the fuck is even this
+    // println!(
+    //     "selecting buffer: {}",
+    //     {
+    //         let mut s = String::new();
+    //         for i in &selected.items {
+    //             s.push_str(
+    //                 &format!(
+    //                     "\"{}\", ",
+    //                     i
+    //                 )
+    //             );
+    //         }
+    //         s
+    //     }
+    // );
+    // println!("from: {:?}, to: {:?}", selected.from, selected.to);
+    log!(
+        "selecting buffer: {}",
+        {
+            let mut s = String::new();
+            for i in &selected.items {
+                s.push_str(
+                    &format!(
+                        "\"{}\", ",
+                        i
+                    )
+                );
+            }
+            s
+        }
+    );
+    log!("from: {:?}, to: {:?}", selected.from, selected.to);
     Ok(())
 }

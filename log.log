@@ -1,0 +1,11 @@
+index: 1 at (1,0), selecting: 172code
+index: 2 at (2,0), selecting: Adobe Photoshop 2021 v22.5.3.561 (x64)
+index: 3 at (3,0), selecting: AIDA
+index: 4 at (0,1), selecting: blender
+index: 5 at (1,1), selecting: build
+index: 4 at (1,1), selecting: build
+selecting buffer: "blender", "build", 
+from: Some(4), to: Some(5)
+index: 5 at (1,1), selecting: build
+index: 9 at (1,2), selecting: fullsc
+index: 8 at (0,2), selecting: DeEn
