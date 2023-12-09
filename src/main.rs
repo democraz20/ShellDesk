@@ -127,6 +127,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         selected: Selected { items: vec![], from: None, to: None }
     };
 
+    // log!("items count: {}", dirItems.len()*items_per_row as usize);
+    log!("items count: {}", dirItemsCount);
+
+
     loop {
         match event::read()? {
             Key(KeyEvent {
@@ -158,7 +162,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
 
                     //start selecting
-                    if cursor.selected.items.len() == 0 {
+                    if cursor.selected.items.len() == 0 && cursor.selecting.index != dirItemsCount-1{
                         cursor.selected.from = Some(cursor.selecting.index);
                         cursor.selected.to = Some(cursor.selecting.index+1);
                         
@@ -225,12 +229,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         }
                         else if Some(cursor.selecting.index) == cursor.selected.to {
-                            cursor.selecting.index+=1;
-                            let v = cursor.selected.to.unwrap() + 1;
-                            cursor.selected.to = Some(v);
-                            let (x, y) = index_to_xy(cursor.selecting.index, items_per_row as usize);
-                            let t = &dirItems[y][x];
-                            cursor.selected.items.push(t.to_string());
+                            // if cursor.selecting.index != cursor.selected.items.len() {
+                            if cursor.selecting.index != dirItemsCount-1 {
+                                cursor.selecting.index+=1;
+                                let v = cursor.selected.to.unwrap() + 1;
+                                cursor.selected.to = Some(v);
+                                let (x, y) = index_to_xy(cursor.selecting.index, items_per_row as usize);
+                                let t = &dirItems[y][x];
+                                cursor.selected.items.push(t.to_string());
+                            }
                         }
                         t_p(&cursor, &dirItems, &longest_item)?;
                         v_p(&cursor.selected)?;
@@ -275,7 +282,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             cursor.selected.to = None;
                         }
                         else if Some(cursor.selecting.index) == cursor.selected.from {
-                            
+                            if cursor.selected.from.unwrap()-1 != 0 { 
+                                //not selecting the first item
+                                cursor.selecting.index-=1;
+                                let v = cursor.selected.from.unwrap() + 1;
+                                cursor.selected.from = Some(v);
+                                let (x, y) = index_to_xy(cursor.selecting.index, items_per_row as usize);
+                                let t = &dirItems[y][x];
+                                cursor.selected.items.insert(0, t.to_string());
+                            }
                         }
                     }
                 }
@@ -286,7 +301,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 code: KeyCode::Right,
                 kind: KeyEventKind::Press, ..
             }) => {
-                if cursor.selecting.index < dirItemsCount {
+                if cursor.selecting.index < dirItemsCount-1 {
                     cursor.selecting.index += 1;
                     (cursor.selecting.x, cursor.selecting.y) = index_to_xy(cursor.selecting.index, items_per_row as usize);
                     t_p(&cursor, &dirItems, &longest_item)?;
@@ -307,7 +322,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 code: KeyCode::Down,
                 kind: KeyEventKind::Press, ..
             }) => {
-                if cursor.selecting.index < dirItemsCount {
+                if cursor.selecting.index < dirItemsCount-1 {
                     if (cursor.selecting.index+items_per_row as usize) > (dirItemsCount-1) {
                         cursor.selecting.index = dirItemsCount-1
                     }
@@ -367,7 +382,7 @@ fn t_p(cursor: &Cursor, dirItems: &Vec<Vec<String>> , longest_item: &String) -> 
     Ok(())
 }
 fn v_p(selected: &Selected) -> Result<(), Box<dyn Error>> {
-    execute!(stdout(), MoveTo(0, 1))?;
+    // execute!(stdout(), MoveTo(0, 1))?;
     // //lol what the fuck is even this
     // println!(
     //     "selecting buffer: {}",
@@ -403,3 +418,7 @@ fn v_p(selected: &Selected) -> Result<(), Box<dyn Error>> {
     log!("from: {:?}, to: {:?}", selected.from, selected.to);
     Ok(())
 }
+// fn i_p(cursor: &Cursor) -> Result<(), Box<dyn Error>> {
+//     log!("items count: {}", cursor.selected.items.len());
+//     Ok(())
+// }
