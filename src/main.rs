@@ -252,7 +252,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }) => {
                 if cursor.selecting.index-1 >= 1 {
                     //cant be ".." because ".." is index 0
-                    if cursor.selected.items.len() == 0 {
+                    if cursor.selected.items.len() == 0 { //nothing selected yet
                         cursor.selected.from = Some(cursor.selecting.index-1);
                         cursor.selected.to = Some(cursor.selecting.index);
 
@@ -283,13 +283,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                         else if Some(cursor.selecting.index) == cursor.selected.from {
                             if cursor.selected.from.unwrap()-1 != 0 { 
-                                //not selecting the first item
                                 cursor.selecting.index-=1;
-                                let v = cursor.selected.from.unwrap() + 1;
+                                let v = cursor.selected.from.unwrap() - 1;
                                 cursor.selected.from = Some(v);
                                 let (x, y) = index_to_xy(cursor.selecting.index, items_per_row as usize);
                                 let t = &dirItems[y][x];
                                 cursor.selected.items.insert(0, t.to_string());
+
+                                t_p(&cursor, &dirItems, &longest_item)?;
+                                v_p(&cursor.selected)?;
+                            }
+                        }
+                        else if Some(cursor.selecting.index) == cursor.selected.to {
+                            if cursor.selecting.index-1 != 0 {
+                                cursor.selecting.index-=1;
+                                let v = cursor.selected.to.unwrap() - 1;
+                                cursor.selected.to = Some(v); 
+                                cursor.selected.items.pop();
+
+                                t_p(&cursor, &dirItems, &longest_item)?;
+                                v_p(&cursor.selected)?;
                             }
                         }
                     }
