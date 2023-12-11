@@ -219,8 +219,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                         else if Some(cursor.selecting.index) == cursor.selected.from {
                             if cursor.selected.from.unwrap()+1 == cursor.selected.to.unwrap() {
-                                //reset selected to zero
-                                // cursor.selected.from = 
+                                //colapse select
+                                cursor.selected.items.clear();
+                                cursor.selected.from = None;
+                                cursor.selected.to = None;
+                                cursor.selecting.index+=1;
                             } else {
                                 cursor.selecting.index+=1;
                                 let v = cursor.selected.from.unwrap() + 1;
@@ -290,24 +293,43 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 let t = &dirItems[y][x];
                                 cursor.selected.items.insert(0, t.to_string());
 
-                                t_p(&cursor, &dirItems, &longest_item)?;
-                                v_p(&cursor.selected)?;
                             }
                         }
-                        else if Some(cursor.selecting.index) == cursor.selected.to {
-                            if cursor.selecting.index-1 != 0 {
+                        else if Some(cursor.selecting.index) == cursor.selected.to 
+                            && cursor.selecting.index-1 != 0 {
+                            if cursor.selected.to.unwrap()-1 == cursor.selected.from.unwrap() {
+                                cursor.selected.items.clear();
+                                cursor.selected.from = None;
+                                cursor.selected.to = None;
+                                cursor.selecting.index-=1;
+                            }
+                            else {
                                 cursor.selecting.index-=1;
                                 let v = cursor.selected.to.unwrap() - 1;
                                 cursor.selected.to = Some(v); 
                                 cursor.selected.items.pop();
-
-                                t_p(&cursor, &dirItems, &longest_item)?;
-                                v_p(&cursor.selected)?;
                             }
                         }
+                        t_p(&cursor, &dirItems, &longest_item)?;
+                        v_p(&cursor.selected)?;
                     }
                 }
             }
+
+            Key(KeyEvent{
+                code: KeyCode::Down,
+                kind: KeyEventKind::Press,
+                modifiers: KeyModifiers::SHIFT, ..
+            }) => {
+
+            },
+            Key(KeyEvent{
+                code: KeyCode::Up,
+                kind: KeyEventKind::Press,
+                modifiers: KeyModifiers::SHIFT, ..
+            }) => {
+
+            },
 
             //------------normal select----------------
             Key(KeyEvent{
@@ -414,7 +436,7 @@ fn v_p(selected: &Selected) -> Result<(), Box<dyn Error>> {
     // );
     // println!("from: {:?}, to: {:?}", selected.from, selected.to);
     log!(
-        "selecting buffer: {}",
+        "selecting buffer: [{}]",
         {
             let mut s = String::new();
             for i in &selected.items {
