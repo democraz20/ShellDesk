@@ -2,7 +2,6 @@
 // use std::io::{self, Read, Write};
 // use std::path::Path;
 
-
 // Set the log file path
 // const LOG_FILE_PATH: &str = "log.txt";
 

@@ -1,7 +1,4 @@
-use crossterm::{
-    execute,
-    cursor::MoveTo
-};
+use crossterm::{cursor::MoveTo, execute};
 use std::io::stdout;
 
 pub fn print_borders(X: u16, Y: u16) -> Result<(), Box<dyn std::error::Error>> {

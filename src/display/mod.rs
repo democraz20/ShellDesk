@@ -1,2 +1,2 @@
-pub mod redraws;
 pub mod layout;
+pub mod redraws;

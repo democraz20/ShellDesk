@@ -1,5 +1,5 @@
-use std::fs::ReadDir;
 use std::fs::DirEntry;
+use std::fs::ReadDir;
 
 pub fn custom_sort(read_dir: ReadDir) -> Vec<String> {
     let mut file_list: Vec<DirEntry> = read_dir.filter_map(Result::ok).collect();
