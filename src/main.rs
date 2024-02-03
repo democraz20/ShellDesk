@@ -81,16 +81,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     //`longest_item.len() + 2` is due to displaying the cursor on the side of the screen
-    let items_per_row: i32 = ((columns - (RIGHT_MARGIN + LEFT_MARGIN)) as f32
+    let items_per_row: usize = ((columns - (RIGHT_MARGIN + LEFT_MARGIN)) as f32
         / (longest_item.len() + 2) as f32)
-        .floor() as i32;
-    let rows_on_screen: i32 = ((rows as i32 - (TOP_MARGIN + BOTTOM_MARGIN) as i32) + 1) / 2;
+        .floor() as usize;
+    let rows_on_screen: usize= (((rows as i32 - (TOP_MARGIN + BOTTOM_MARGIN) as i32) + 1) / 2) as usize;
 
     let dirItemsCount = UdirItems.len();
 
     let mut dirItems: Vec<Vec<String>> = vec![];
 
-    for chunk in UdirItems.chunks(items_per_row as usize) {
+    for chunk in UdirItems.chunks(items_per_row) {
         let sub_vec: Vec<String> = chunk.to_vec();
         dirItems.push(sub_vec);
     }
@@ -131,7 +131,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
     };
 
-    // log!("items count: {}", dirItems.len()*items_per_row as usize);
+    // log!("items count: {}", dirItems.len()*items_per_row);
     log!("items count: {}", dirItemsCount);
 
     loop {
@@ -155,12 +155,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ..
             }) => {
                 if cursor.selecting.index < dirItemsCount - 1 {
-                    let (x, y) = index_to_xy(cursor.selecting.index, items_per_row as usize);
+                    let (x, y) = index_to_xy(cursor.selecting.index, items_per_row);
                     let t = &dirItems[y][x];
                     if t == &String::from("..") {
                         cursor.selecting.index += 1;
                         (cursor.selecting.x, cursor.selecting.y) =
-                            index_to_xy(cursor.selecting.index, items_per_row as usize);
+                            index_to_xy(cursor.selecting.index, items_per_row );
                         t_p(&cursor, &dirItems, &longest_item)?;
                         v_p(&cursor.selected)?;
                         continue;
@@ -175,11 +175,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                         // cursor.selected.items = vec
                         // cursor.selected.items.push(value)
-                        let (x, y) = index_to_xy(cursor.selecting.index, items_per_row as usize);
+                        let (x, y) = index_to_xy(cursor.selecting.index, items_per_row );
                         let t = &dirItems[y][x];
                         cursor.selected.items.push(t.to_string());
                         let (x, y) =
-                            index_to_xy(cursor.selecting.index + 1, items_per_row as usize);
+                            index_to_xy(cursor.selecting.index + 1, items_per_row );
                         let t = &dirItems[y][x];
                         cursor.selected.items.push(t.to_string());
 
@@ -209,18 +209,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             cursor.selected.from = Some(cursor.selecting.index);
 
                             let (x, y) =
-                                index_to_xy(cursor.selecting.index, items_per_row as usize);
+                                index_to_xy(cursor.selecting.index, items_per_row );
                             let t = &dirItems[y][x];
                             cursor.selected.items.push(t.to_string());
 
                             cursor.selecting.index += 1;
                             (cursor.selecting.x, cursor.selecting.y) =
-                                index_to_xy(cursor.selecting.index, items_per_row as usize);
+                                index_to_xy(cursor.selecting.index, items_per_row );
 
                             cursor.selected.to = Some(cursor.selecting.index);
 
                             let (x, y) =
-                                index_to_xy(cursor.selecting.index, items_per_row as usize);
+                                index_to_xy(cursor.selecting.index, items_per_row );
                             let t = &dirItems[y][x];
                             cursor.selected.items.push(t.to_string());
 
@@ -245,7 +245,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 let v = cursor.selected.to.unwrap() + 1;
                                 cursor.selected.to = Some(v);
                                 let (x, y) =
-                                    index_to_xy(cursor.selecting.index, items_per_row as usize);
+                                    index_to_xy(cursor.selecting.index, items_per_row);
                                 let t = &dirItems[y][x];
                                 cursor.selected.items.push(t.to_string());
                             }
@@ -270,10 +270,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         cursor.selected.to = Some(cursor.selecting.index);
 
                         let (x, y) =
-                            index_to_xy(cursor.selecting.index - 1, items_per_row as usize);
+                            index_to_xy(cursor.selecting.index - 1, items_per_row );
                         let t = &dirItems[y][x];
                         cursor.selected.items.push(t.to_string());
-                        let (x, y) = index_to_xy(cursor.selecting.index, items_per_row as usize);
+                        let (x, y) = index_to_xy(cursor.selecting.index, items_per_row  );
                         let t = &dirItems[y][x];
                         cursor.selected.items.push(t.to_string());
 
@@ -300,7 +300,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 let v = cursor.selected.from.unwrap() - 1;
                                 cursor.selected.from = Some(v);
                                 let (x, y) =
-                                    index_to_xy(cursor.selecting.index, items_per_row as usize);
+                                    index_to_xy(cursor.selecting.index, items_per_row  );
                                 let t = &dirItems[y][x];
                                 cursor.selected.items.insert(0, t.to_string());
                             }
@@ -334,41 +334,41 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if cursor.selecting.index < dirItemsCount - 1 { //not sure what this does yet
                     if cursor.selecting.index == 0 { //special case
                         //just normal select
-                        if (cursor.selecting.index + items_per_row as usize) > (dirItemsCount - 1) {
+                        if (cursor.selecting.index + items_per_row  ) > (dirItemsCount - 1) {
                             cursor.selecting.index = dirItemsCount - 1
                         } else {
-                            cursor.selecting.index += items_per_row as usize;
+                            cursor.selecting.index += items_per_row  ;
                         }
                         (cursor.selecting.x, cursor.selecting.y) =
-                            index_to_xy(cursor.selecting.index, items_per_row as usize);
+                            index_to_xy(cursor.selecting.index, items_per_row  );
                         t_p(&cursor, &dirItems, &longest_item)?;
                         continue;
                     } 
                     if cursor.selected.items.len() == 0 { //first time selecting
                         if cursor.selected.from != None && cursor.selected.to != None { //idk
                         } else {
-                            if (cursor.selecting.index + items_per_row as usize)
+                            if (cursor.selecting.index + items_per_row  )
                                 > (dirItemsCount - 1)
                             { //if selecting will overflow
                                 cursor.selected.from = Some(cursor.selecting.index);
                                 cursor.selected.to = Some(dirItemsCount - 1);
                                 for i in cursor.selected.from.unwrap()..cursor.selected.to.unwrap() {
                                     let (x, y) =
-                                        index_to_xy(i, items_per_row as usize);
+                                        index_to_xy(i, items_per_row );
                                     let t = &dirItems[y][x];
                                     cursor.selected.items.push(t.to_string());
                                 }
                                 cursor.selecting.index += dirItemsCount-1;
                             } else {
                                 cursor.selected.from = Some(cursor.selecting.index);
-                                cursor.selected.to = Some(cursor.selecting.index+items_per_row as usize);
+                                cursor.selected.to = Some(cursor.selecting.index+items_per_row );
                                 for i in cursor.selected.from.unwrap()..cursor.selected.to.unwrap()+1 {
                                     let (x, y) =
-                                        index_to_xy(i, items_per_row as usize);
+                                        index_to_xy(i, items_per_row );
                                     let t = &dirItems[y][x];
                                     cursor.selected.items.push(t.to_string());
                                 }
-                                cursor.selecting.index += items_per_row as usize;
+                                cursor.selecting.index += items_per_row ;
                             }
                         }
                     } else {
@@ -377,35 +377,45 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             if cursor.selecting.index == cursor.selected.to.unwrap() {
                                 let old_to = cursor.selected.to.unwrap();
                                 let mut v = cursor.selected.to.unwrap();
-                                v += items_per_row as usize;
+                                v += items_per_row ;
                                 cursor.selected.to = Some(v);
                                 
-                                let diff_range = old_to..v+1; // +1 somehow?
+                                let diff_range = old_to+1..v+1; // +1 somehow?
                                 for i in diff_range {
-                                    let (x, y) = index_to_xy(i, items_per_row as usize); 
+                                    let (x, y) = index_to_xy(i, items_per_row ); 
                                     let t = &dirItems[y][x];
                                     cursor.selected.items.push(t.to_string());
                                 }
-                                cursor.selecting.index += items_per_row as usize;
+                                cursor.selecting.index += items_per_row ;
                             }
                             if cursor.selecting.index == cursor.selected.from.unwrap() {
+                                log!("uhh");
                                 //for now if overlapped, just collapse
                                 // let diff = cursor.selected.to.unwrap() - cursor.selected.from.unwrap();
                                 // log!("diff : {diff}");
-                                if cursor.selected.items.len() >= items_per_row as usize {
+                                // if cursor.selected.items.len() >= items_per_row  {
+                                
+                                if cursor.selected.items.len() <= items_per_row  ||
+                                cursor.selected.from.unwrap()+items_per_row 
+                                == cursor.selected.to.unwrap()
+                                {
                                     //collapse
+                                    log!("collapse");
                                     cursor.selecting.index = cursor.selected.to.unwrap();
                                     cursor.selected.items.clear();
                                     cursor.selected.from = None;
                                     cursor.selected.to = None;
                                 }
                                 else {
-                                    let old_from = cursor.selected.from.unwrap();
+                                    // let old_from = cursor.selected.from.unwrap();
                                     let mut v = cursor.selected.from.unwrap();
-                                    v -= items_per_row as usize;
+                                    v += items_per_row ;
                                     cursor.selected.from = Some(v);
 
-                                    
+                                    for _ in 0..items_per_row {
+                                        cursor.selected.items.remove(0);
+                                    }
+                                    cursor.selecting.index += items_per_row ;
                                 }
                             }
                         }
@@ -426,27 +436,40 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     //     //nothing happens
                     // }
                     if cursor.selected.items.len() == 0 { //start selecting
-                        if (cursor.selecting.index as i32-items_per_row) <= 1 {
+                        if (cursor.selecting.index-items_per_row) <= 1 {
                             cursor.selected.from = Some(1);
                             cursor.selected.to = Some(cursor.selecting.index);
                             // for i in cursor.selected.from.unwrap()..cursor.selected.to.unwrap() {
                             for i in cursor.selected.from.unwrap()..cursor.selected.to.unwrap()+1 { //??????? it worked
                                 let (x, y) =
-                                    index_to_xy(i, items_per_row as usize);
+                                    index_to_xy(i, items_per_row );
                                 let t = &dirItems[y][x];
                                 cursor.selected.items.push(t.to_string());
                             }
                             cursor.selecting.index = 1;
                         } else {
-                            cursor.selected.from = Some(cursor.selecting.index - items_per_row as usize);
+                            cursor.selected.from = Some(cursor.selecting.index - items_per_row );
                             cursor.selected.to = Some(cursor.selecting.index);
                             for i in cursor.selected.from.unwrap()..cursor.selected.to.unwrap()+1 {
                                 let (x, y) =
-                                    index_to_xy(i, items_per_row as usize);
+                                    index_to_xy(i, items_per_row );
                                 let t = &dirItems[y][x];
                                 cursor.selected.items.push(t.to_string());
                             }
-                            cursor.selecting.index -= items_per_row as usize;
+                            cursor.selecting.index -= items_per_row ;
+                        }
+                    } else { //moving existing ends
+                        if cursor.selected.from != None && cursor.selected.to != None {
+                            if cursor.selecting.index == cursor.selected.to.unwrap() {
+                                let v = cursor.selected.to.unwrap()-items_per_row ;
+                                cursor.selected.to = Some(v);
+                                for _ in 0..items_per_row {
+                                    cursor.selected.items.remove(
+                                        cursor.selected.items.len()-1
+                                    );
+                                }
+                                cursor.selecting.index -= items_per_row 
+                            }
                         }
                     }
                     t_p(&cursor, &dirItems, &longest_item)?;
@@ -463,7 +486,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if cursor.selecting.index < dirItemsCount - 1 {
                     cursor.selecting.index += 1;
                     (cursor.selecting.x, cursor.selecting.y) =
-                        index_to_xy(cursor.selecting.index, items_per_row as usize);
+                        index_to_xy(cursor.selecting.index, items_per_row );
                     t_p(&cursor, &dirItems, &longest_item)?;
                 }
             }
@@ -475,7 +498,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if cursor.selecting.index > 0 {
                     cursor.selecting.index -= 1;
                     (cursor.selecting.x, cursor.selecting.y) =
-                        index_to_xy(cursor.selecting.index, items_per_row as usize);
+                        index_to_xy(cursor.selecting.index, items_per_row );
                     t_p(&cursor, &dirItems, &longest_item)?;
                 }
             }
@@ -485,13 +508,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ..
             }) => {
                 if cursor.selecting.index < dirItemsCount - 1 {
-                    if (cursor.selecting.index + items_per_row as usize) > (dirItemsCount - 1) {
+                    if (cursor.selecting.index + items_per_row ) > (dirItemsCount - 1) {
                         cursor.selecting.index = dirItemsCount - 1
                     } else {
-                        cursor.selecting.index += items_per_row as usize;
+                        cursor.selecting.index += items_per_row ;
                     }
                     (cursor.selecting.x, cursor.selecting.y) =
-                        index_to_xy(cursor.selecting.index, items_per_row as usize);
+                        index_to_xy(cursor.selecting.index, items_per_row );
                     t_p(&cursor, &dirItems, &longest_item)?;
                 }
             }
@@ -502,13 +525,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }) => {
                 if cursor.selecting.index > 0 {
                     // #[allow(unused_comparisons)]
-                    if (cursor.selecting.index as i32 - items_per_row) < 0 {
+                    if (cursor.selecting.index as isize - items_per_row as isize) < 0 {
                         cursor.selecting.index = 0;
                     } else {
-                        cursor.selecting.index -= items_per_row as usize;
+                        cursor.selecting.index -= items_per_row ;
                     }
                     (cursor.selecting.x, cursor.selecting.y) =
-                        index_to_xy(cursor.selecting.index, items_per_row as usize);
+                        index_to_xy(cursor.selecting.index, items_per_row );
                     t_p(&cursor, &dirItems, &longest_item)?;
                 }
             }
