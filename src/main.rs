@@ -375,22 +375,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         //moving existing ends
                         if cursor.selected.from != None && cursor.selected.to != None {
                             if cursor.selecting.index == cursor.selected.to.unwrap() {
-                                let old_to = cursor.selected.to.unwrap();
-                                let mut v = cursor.selected.to.unwrap();
-                                v += items_per_row ;
-                                cursor.selected.to = Some(v);
-                                
-                                let diff_range = old_to+1..v+1; // +1 somehow?
-                                for i in diff_range {
-                                    let (x, y) = index_to_xy(i, items_per_row ); 
-                                    let t = &dirItems[y][x];
-                                    cursor.selected.items.push(t.to_string());
+                                if cursor.selected.to.unwrap()+items_per_row > dirItemsCount-1{
+                                    let old_to = cursor.selected.to.unwrap();
+                                    cursor.selected.to = Some(dirItemsCount - 1);
+                                    for i in old_to+1..dirItemsCount {
+                                        let (x, y) = index_to_xy(i, items_per_row ); 
+                                        let t = &dirItems[y][x];
+                                        cursor.selected.items.push(t.to_string());
+                                    }
+                                    cursor.selecting.index = dirItemsCount-1;
                                 }
-                                cursor.selecting.index += items_per_row ;
+                                else {
+                                    let old_to = cursor.selected.to.unwrap();
+                                    let mut v = cursor.selected.to.unwrap();
+                                    v += items_per_row ;
+                                    cursor.selected.to = Some(v);
+                                    
+                                    let diff_range = old_to+1..v+1; // +1 somehow?
+                                    for i in diff_range {
+                                        let (x, y) = index_to_xy(i, items_per_row ); 
+                                        let t = &dirItems[y][x];
+                                        cursor.selected.items.push(t.to_string());
+                                    }
+                                    cursor.selecting.index += items_per_row ;
+                                }
                             }
-                            if cursor.selecting.index == cursor.selected.from.unwrap() {
+                            else if cursor.selecting.index == cursor.selected.from.unwrap() {
                                 log!("uhh");
-                                //for now if overlapped, just collapse
+                                // for now if overlapped, just collapse
                                 // let diff = cursor.selected.to.unwrap() - cursor.selected.from.unwrap();
                                 // log!("diff : {diff}");
                                 // if cursor.selected.items.len() >= items_per_row  {
@@ -406,6 +418,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     cursor.selected.from = None;
                                     cursor.selected.to = None;
                                 }
+                                // else if cursor.selected.to.unwrap()+items_per_row > dirItemsCount-1{
+                                //     let old_to = cursor.selected.to.unwrap();
+                                //     cursor.selected.to = Some(dirItemsCount - 1);
+                                //     for i in old_to..dirItemsCount-1 {
+                                //         let (x, y) = index_to_xy(i, items_per_row ); 
+                                //         let t = &dirItems[y][x];
+                                //         cursor.selected.items.push(t.to_string());
+                                //     }
+                                //     cursor.selecting.index = dirItemsCount-1;
+                                // }
                                 else {
                                     // let old_from = cursor.selected.from.unwrap();
                                     let mut v = cursor.selected.from.unwrap();
@@ -461,14 +483,57 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     } else { //moving existing ends
                         if cursor.selected.from != None && cursor.selected.to != None {
                             if cursor.selecting.index == cursor.selected.to.unwrap() {
-                                let v = cursor.selected.to.unwrap()-items_per_row ;
-                                cursor.selected.to = Some(v);
-                                for _ in 0..items_per_row {
-                                    cursor.selected.items.remove(
-                                        cursor.selected.items.len()-1
-                                    );
+                                if cursor.selected.items.len() <= items_per_row ||
+                                cursor.selected.to.unwrap()-items_per_row == 
+                                cursor.selected.from.unwrap(){
+                                    //overlapped -> collapse (for now)
+                                    cursor.selecting.index = cursor.selected.from.unwrap();
+                                    cursor.selected.items.clear();
+                                    cursor.selected.from = None;
+                                    cursor.selected.to = None;
+                                } else {
+                                    let v = cursor.selected.to.unwrap()-items_per_row ;
+                                    cursor.selected.to = Some(v);
+                                    for _ in 0..items_per_row {
+                                        cursor.selected.items.remove(
+                                            cursor.selected.items.len()-1
+                                        );
+                                    }
+                                    cursor.selecting.index -= items_per_row 
                                 }
-                                cursor.selecting.index -= items_per_row 
+                            }
+                            else if cursor.selecting.index==cursor.selected.from.unwrap() {
+                                if cursor.selected.from.unwrap()-items_per_row == 0 {
+                                    let old_from = cursor.selected.from.unwrap();
+                                    cursor.selected.from = Some(
+                                        cursor.selected.from.unwrap()-(items_per_row-1)
+                                    );
+                                    log!("{}..{}", cursor.selected.from.unwrap(), old_from);
+                                    // for i in cursor.selected.from.unwrap()..old_from {
+                                    for i in (cursor.selected.from.unwrap()..old_from).rev() {
+                                    // for i in old_from..cursor.selected.from.unwrap() {
+                                        let (x, y) =
+                                        index_to_xy(i, items_per_row );
+                                        let t = &dirItems[y][x];
+                                        // cursor.selected.items.push(t.to_string());
+                                        cursor.selected.items.insert(0, t.to_string());
+                                    }
+                                } else {
+                                    let old_from = cursor.selected.from.unwrap();
+                                    cursor.selected.from = Some(
+                                        cursor.selected.from.unwrap()-items_per_row
+                                    );
+                                    log!("{}..{}", cursor.selected.from.unwrap(), old_from);
+                                    // for i in cursor.selected.from.unwrap()..old_from {
+                                    for i in (cursor.selected.from.unwrap()..old_from).rev() {
+                                    // for i in old_from..cursor.selected.from.unwrap() {
+                                        let (x, y) =
+                                        index_to_xy(i, items_per_row );
+                                        let t = &dirItems[y][x];
+                                        // cursor.selected.items.push(t.to_string());
+                                        cursor.selected.items.insert(0, t.to_string());
+                                    }
+                                }
                             }
                         }
                     }
