@@ -250,6 +250,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 cursor.selected.items.push(t.to_string());
                             }
                         }
+                        cursor.current_line = cursor.selecting.y;
                         t_p(&cursor, &dirItems, &longest_item)?;
                         v_p(&cursor.selected)?;
                     }
@@ -319,6 +320,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 cursor.selected.items.pop();
                             }
                         }
+                        cursor.current_line = cursor.selecting.y;
                         t_p(&cursor, &dirItems, &longest_item)?;
                         v_p(&cursor.selected)?;
                     }
@@ -442,6 +444,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         }
                     }
+                    cursor.current_line = cursor.selecting.y;
                     t_p(&cursor, &dirItems, &longest_item)?;
                     v_p(&cursor.selected)?; 
                 }
@@ -537,6 +540,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         }
                     }
+                    cursor.current_line = cursor.selecting.y;
                     t_p(&cursor, &dirItems, &longest_item)?;
                     v_p(&cursor.selected)?; 
                 // }
@@ -552,6 +556,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     cursor.selecting.index += 1;
                     (cursor.selecting.x, cursor.selecting.y) =
                         index_to_xy(cursor.selecting.index, items_per_row );
+                    
+                    cursor.current_line = cursor.selecting.y;
                     t_p(&cursor, &dirItems, &longest_item)?;
                 }
             }
@@ -564,6 +570,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     cursor.selecting.index -= 1;
                     (cursor.selecting.x, cursor.selecting.y) =
                         index_to_xy(cursor.selecting.index, items_per_row );
+                    
+                    cursor.current_line = cursor.selecting.y;
                     t_p(&cursor, &dirItems, &longest_item)?;
                 }
             }
@@ -580,6 +588,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                     (cursor.selecting.x, cursor.selecting.y) =
                         index_to_xy(cursor.selecting.index, items_per_row );
+
+                    cursor.current_line = cursor.selecting.y;
                     t_p(&cursor, &dirItems, &longest_item)?;
                 }
             }
@@ -597,6 +607,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                     (cursor.selecting.x, cursor.selecting.y) =
                         index_to_xy(cursor.selecting.index, items_per_row );
+                        
+                    cursor.current_line = cursor.selecting.y;
                     t_p(&cursor, &dirItems, &longest_item)?;
                 }
             }
@@ -626,11 +638,12 @@ fn t_p(
     // );
     // stdout().flush()?;
     log!(
-        "index: {} at ({},{}), selecting: {}",
+        "index: {} at ({},{}), selecting: {}, current line: {}",
         cursor.selecting.index,
         cursor.selecting.x,
         cursor.selecting.y,
         dirItems[cursor.selecting.y][cursor.selecting.x],
+        cursor.current_line
     );
     Ok(())
 }
