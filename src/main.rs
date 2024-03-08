@@ -103,8 +103,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("{:?}", row);
     }
 
-    // println!(" x {}, y {}", items_per_row, rows_on_screen);
-
     //IMPORTANT
     // for x in 0..items_per_row {
     //     for y in 0..rows_on_screen {
