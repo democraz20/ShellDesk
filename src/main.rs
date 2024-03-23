@@ -75,8 +75,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // print_borders(columns, rows)?;
     // execute!(stdout(), MoveTo(0,1))?;
 
-    // println!("col : rows | {} : {}", columns, rows);
-
     match UdirItems.iter().max_by_key(|s| s.len()) {
         Some(s) => {
             longest_item = String::from(s);
@@ -110,8 +108,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for row in &dirItems {
         println!("{:?}", row);
     }
-
-    // println!(" x {}, y {}", items_per_row, rows_on_screen);
 
     //IMPORTANT
     // for x in 0..items_per_row {
