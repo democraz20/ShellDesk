@@ -35,6 +35,11 @@ struct Cursor {
 }
 
 #[derive(Debug)]
+struct DisplayInfo {
+    top_display_line: usize
+}
+
+#[derive(Debug)]
 struct Selecting {
     index: usize,
     x: usize,
@@ -84,7 +89,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let items_per_row: usize = ((columns - (RIGHT_MARGIN + LEFT_MARGIN)) as f32
         / (longest_item.len() + 2) as f32)
         .floor() as usize;
-    let rows_on_screen: usize= (((rows as i32 - (TOP_MARGIN + BOTTOM_MARGIN) as i32) + 1) / 2) as usize;
+    // let rows_on_screen: usize= (((rows as i32 - (TOP_MARGIN + BOTTOM_MARGIN) as i32) + 1) / 2) as usize;
+
+    //for debug's sake
+    let rows_on_screen: usize = 3;
 
     let dirItemsCount = UdirItems.len();
 
@@ -131,8 +139,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
     };
 
+    let mut displayinfo = DisplayInfo {
+        top_display_line: 0
+    };
     // log!("items count: {}", dirItems.len()*items_per_row);
-    log!("items count: {}", dirItemsCount);
+    log!("items count: {}\n rowsonscreen: {}", dirItemsCount, rows_on_screen);
 
     loop {
         match event::read()? {
@@ -161,8 +172,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         cursor.selecting.index += 1;
                         (cursor.selecting.x, cursor.selecting.y) =
                             index_to_xy(cursor.selecting.index, items_per_row );
+
+                        let diff = cursor.current_line - displayinfo.top_display_line;
+                        if diff > rows_on_screen {
+                            displayinfo.top_display_line += 1;
+                        }
+
+                        d_p(&displayinfo)?;
                         t_p(&cursor, &dirItems, &longest_item)?;
                         v_p(&cursor.selected)?;
+                        
+                        log!("finished key press");
                         continue;
                     }
 
@@ -185,8 +205,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                         cursor.selecting.index += 1;
 
+                        let diff = cursor.current_line - displayinfo.top_display_line;
+                        if diff > rows_on_screen {
+                            displayinfo.top_display_line += 1;
+                        }
+
+                        d_p(&displayinfo)?;
                         t_p(&cursor, &dirItems, &longest_item)?;
                         v_p(&cursor.selected)?;
+                        log!("finished key press");
                         continue;
                     }
 
@@ -251,8 +278,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         }
                         cursor.current_line = cursor.selecting.y;
+
+                        let diff = cursor.current_line - displayinfo.top_display_line;
+                        if diff > rows_on_screen {
+                            displayinfo.top_display_line += 1;
+                        }
+
+                        d_p(&displayinfo)?;
                         t_p(&cursor, &dirItems, &longest_item)?;
                         v_p(&cursor.selected)?;
+                        log!("finished key press");
                     }
                 }
             }
@@ -280,8 +315,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                         cursor.selecting.index -= 1;
 
+                        let diff = cursor.current_line - displayinfo.top_display_line;
+                        if diff < rows_on_screen {
+                            if displayinfo.top_display_line != 0 {
+                                displayinfo.top_display_line -= 1;
+                            }
+                        }
+                        
+                        d_p(&displayinfo)?;
                         t_p(&cursor, &dirItems, &longest_item)?;
                         v_p(&cursor.selected)?;
+                        log!("finished key press");
                         continue;
                     }
 
@@ -321,8 +365,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         }
                         cursor.current_line = cursor.selecting.y;
+
+                        let diff = cursor.current_line - displayinfo.top_display_line;
+                        if diff < rows_on_screen {
+                            if displayinfo.top_display_line != 0 {
+                                displayinfo.top_display_line -= 1;
+                            }
+                        }
+
+                        d_p(&displayinfo)?;
                         t_p(&cursor, &dirItems, &longest_item)?;
                         v_p(&cursor.selected)?;
+                        log!("finished key press");
                     }
                 }
             }
@@ -343,7 +397,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                         (cursor.selecting.x, cursor.selecting.y) =
                             index_to_xy(cursor.selecting.index, items_per_row  );
+
+                        let diff = cursor.current_line - displayinfo.top_display_line;
+                        if diff > rows_on_screen {
+                            displayinfo.top_display_line += 1;
+                        }
+
+                        d_p(&displayinfo)?;
                         t_p(&cursor, &dirItems, &longest_item)?;
+                        log!("finished key press");
                         continue;
                     } 
                     if cursor.selected.items.len() == 0 { //first time selecting
@@ -445,8 +507,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     }
                     cursor.current_line = cursor.selecting.y;
+
+                    let diff = cursor.current_line - displayinfo.top_display_line;
+                    if diff > rows_on_screen {
+                        displayinfo.top_display_line += 1;
+                    }
+
+                    d_p(&displayinfo)?;
                     t_p(&cursor, &dirItems, &longest_item)?;
                     v_p(&cursor.selected)?; 
+                    log!("finished key press");
                 }
             }
             Key(KeyEvent {
@@ -541,8 +611,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     }
                     cursor.current_line = cursor.selecting.y;
+
+                    let diff = cursor.current_line - displayinfo.top_display_line;
+                    if diff < rows_on_screen {
+                        if displayinfo.top_display_line != 0 {
+                            displayinfo.top_display_line -= 1;
+                        }
+                    }
+
+                    d_p(&displayinfo)?;
                     t_p(&cursor, &dirItems, &longest_item)?;
                     v_p(&cursor.selected)?; 
+                    log!("finished key press");
                 // }
             }
 
@@ -558,7 +638,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         index_to_xy(cursor.selecting.index, items_per_row );
                     
                     cursor.current_line = cursor.selecting.y;
+                    let diff = cursor.current_line - displayinfo.top_display_line;
+                    if diff > rows_on_screen {
+                        displayinfo.top_display_line += 1;
+                    }
+                    d_p(&displayinfo)?;
                     t_p(&cursor, &dirItems, &longest_item)?;
+                    //top row check
+                    // log!(
+                    //     "diff = currentline-topdisplay\n{} = {} - {}, increment: {:?}",
+                    //     diff, cursor.current_line, displayinfo.top_display_line,
+                    //     diff>rows_on_screen
+                    // );
+                    //
+                    log!("finished key press");
                 }
             }
             Key(KeyEvent {
@@ -572,7 +665,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         index_to_xy(cursor.selecting.index, items_per_row );
                     
                     cursor.current_line = cursor.selecting.y;
+
+                    let diff = cursor.current_line - displayinfo.top_display_line;
+                    if diff < rows_on_screen {
+                        if displayinfo.top_display_line != 0 {
+                            displayinfo.top_display_line -= 1;
+                        }
+                    }
+
+                    d_p(&displayinfo)?;
                     t_p(&cursor, &dirItems, &longest_item)?;
+                    log!("finished key press");
                 }
             }
             Key(KeyEvent {
@@ -590,7 +693,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         index_to_xy(cursor.selecting.index, items_per_row );
 
                     cursor.current_line = cursor.selecting.y;
+                    let diff = cursor.current_line - displayinfo.top_display_line;
+                    if diff > rows_on_screen {
+                        displayinfo.top_display_line += 1;
+                    }
+                    d_p(&displayinfo)?;
                     t_p(&cursor, &dirItems, &longest_item)?;
+                    log!("finished key press");
                 }
             }
             Key(KeyEvent {
@@ -609,7 +718,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         index_to_xy(cursor.selecting.index, items_per_row );
                         
                     cursor.current_line = cursor.selecting.y;
+
+                    
+
+                    d_p(&displayinfo)?;
                     t_p(&cursor, &dirItems, &longest_item)?;
+                    log!("finished key press");
                 }
             }
             _ => {}
@@ -638,7 +752,7 @@ fn t_p(
     // );
     // stdout().flush()?;
     log!(
-        "index: {} at ({},{}), selecting: {}, current line: {}",
+        "T | index: {} at ({},{}), selecting: {}, current line: {}",
         cursor.selecting.index,
         cursor.selecting.x,
         cursor.selecting.y,
@@ -666,7 +780,7 @@ fn v_p(selected: &Selected) -> Result<(), Box<dyn Error>> {
     //     }
     // );
     // println!("from: {:?}, to: {:?}", selected.from, selected.to);
-    log!("selecting buffer: [{}]", {
+    log!("V | selecting buffer: [{}]", {
         let mut s = String::new();
         for i in &selected.items {
             s.push_str(&format!("\"{}\", ", i));
@@ -674,6 +788,12 @@ fn v_p(selected: &Selected) -> Result<(), Box<dyn Error>> {
         s
     });
     log!("from: {:?}, to: {:?}", selected.from, selected.to);
+    Ok(())
+}
+fn d_p(displayinfo: &DisplayInfo) -> Result<(), Box<dyn Error>> {
+    log!("D | topdline: {}",
+        displayinfo.top_display_line,
+    );
     Ok(())
 }
 // fn i_p(cursor: &Cursor) -> Result<(), Box<dyn Error>> {
